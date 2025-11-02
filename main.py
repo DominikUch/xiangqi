@@ -1,16 +1,20 @@
+# main.py
 import tkinter as tk
-from gui.singleplayer_gui import SingleplayerGUI
-from gui.multiplayer_gui import MultiplayerGUI
+from gui.single import SingleplayerGUI
+from gui.multi import MultiplayerGUI
 
 # --- globalny motyw ---
 DARK_THEME = False
 ALL_WINDOWS = []  # wszystkie główne okna i Toplevel
 
+
 def get_bg_color():
     return "#2b2b2b" if DARK_THEME else "#f0f0f0"
 
+
 def get_fg_color():
     return "#ffffff" if DARK_THEME else "#000000"
+
 
 def apply_theme_recursive(widget):
     """Rekurencyjnie zmienia kolory dla wszystkich widgetów oprócz Canvas i sprawdzając czy istnieją."""
@@ -27,7 +31,6 @@ def apply_theme_recursive(widget):
     except tk.TclError:
         pass
 
-    # dla widgetów tekstowych
     if isinstance(widget, (tk.Label, tk.Button, tk.Checkbutton, tk.Radiobutton)):
         try:
             widget.config(fg=fg_color)
@@ -55,7 +58,6 @@ def apply_theme_recursive(widget):
         except tk.TclError:
             pass
 
-    # Frame i Toplevel tło
     if isinstance(widget, (tk.Frame, tk.Toplevel)):
         try:
             widget.config(bg=bg_color)
@@ -65,11 +67,13 @@ def apply_theme_recursive(widget):
     for child in widget.winfo_children():
         apply_theme_recursive(child)
 
+
 def apply_theme_global():
     """Odświeża motyw we wszystkich oknach zarejestrowanych w ALL_WINDOWS."""
     for window in ALL_WINDOWS:
         if window.winfo_exists():
             apply_theme_recursive(window)
+
 
 class StartScreen:
     def __init__(self, master):
@@ -77,23 +81,22 @@ class StartScreen:
         if master not in ALL_WINDOWS:
             ALL_WINDOWS.append(master)
 
-        self.master.geometry("850x800")
+        self.master.geometry("1200x800")
         self.frame = tk.Frame(master)
         self.frame.pack(expand=True)
         apply_theme_recursive(self.frame)
 
         tk.Label(self.frame, text="Wybierz tryb gry", font=("Arial", 24, "bold"),
                  bg=get_bg_color(), fg=get_fg_color()).pack(pady=30)
+
         tk.Button(self.frame, text="Singleplayer", width=25, height=2, font=("Arial", 16),
                   command=self.start_singleplayer).pack(pady=10)
         tk.Button(self.frame, text="Multiplayer", width=25, height=2, font=("Arial", 16),
                   command=self.start_multiplayer).pack(pady=10)
         tk.Button(self.frame, text="Ustawienia", width=25, height=2, font=("Arial", 16),
                   command=self.show_settings).pack(pady=10)
-        
         tk.Button(self.frame, text="Tutorial", width=25, height=2, font=("Arial", 16),
                   command=self.show_tutorial).pack(pady=10)
-        
 
     def start_singleplayer(self):
         self.frame.destroy()
@@ -104,13 +107,27 @@ class StartScreen:
 
     def start_multiplayer(self):
         self.frame.destroy()
-        gui = MultiplayerGUI(self.master, self.show_menu)
-        widgets = [gui.main_frame, gui.history_frame, gui.rot_btn, gui.menu_btn,
-                   gui.controls_frame, gui.msg_label]
-        for w in widgets:
-            if w not in ALL_WINDOWS:
-                ALL_WINDOWS.append(w)
-        apply_theme_global()
+
+        # Pytanie, czy użytkownik jest inicjatorem
+        win = tk.Toplevel(self.master)
+        win.title("Multiplayer Setup")
+        if win not in ALL_WINDOWS:
+            ALL_WINDOWS.append(win)
+        win.geometry("400x200")
+        apply_theme_recursive(win)
+
+        tk.Label(win, text="Czy jesteś inicjatorem połączenia?", font=("Arial", 14),
+                 bg=get_bg_color(), fg=get_fg_color()).pack(pady=20)
+
+        def launch_chat(is_initiator):
+            win.destroy()
+            chat_app = MultiplayerGUI(self.master, is_initiator)
+
+
+        tk.Button(win, text="Tak", width=15, font=("Arial", 12),
+                  command=lambda: launch_chat(True)).pack(pady=5)
+        tk.Button(win, text="Nie", width=15, font=("Arial", 12),
+                  command=lambda: launch_chat(False)).pack(pady=5)
 
     def show_menu(self):
         # odtworzenie ekranu startowego
@@ -173,7 +190,7 @@ POWODZENIA I MIŁEJ GRY!"""
         def toggle_theme():
             global DARK_THEME
             DARK_THEME = not DARK_THEME
-            apply_theme_global()  # cała aplikacja reaguje natychmiast
+            apply_theme_global()
 
         tk.Button(win, text="Przełącz ciemny motyw", width=25, font=("Arial", 12),
                   command=toggle_theme).pack(pady=10)

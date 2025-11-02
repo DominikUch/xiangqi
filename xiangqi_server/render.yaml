@@ -1,7 +1,0 @@
-services:
-  - type: web
-    name: xiangqi-server
-    env: python
-    plan: free
-    buildCommand: ""
-    startCommand: "python server/server.py"

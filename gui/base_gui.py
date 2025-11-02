@@ -180,7 +180,8 @@ class BaseXiangqiGUI:
             self.canvas.create_rectangle(x-r, y-r, x+r, y+r, outline="blue", width=3, tags="highlight")
 
     # --- wykonanie ruchu ---
-    def _execute_move(self, src, dst):
+    def _execute_move(self, src, dst, remote=False):
+        """Wykonaj ruch i opcjonalnie dodaj go do historii."""
         if dst in self.pieces:
             captured_id = self.piece_ids.pop(dst)
             self.canvas.delete(captured_id)
@@ -198,9 +199,16 @@ class BaseXiangqiGUI:
         move_number = len(self.move_history) + 1  # numer kolejnego ruchu
         move_str = f"{move_number}. {color_prefix} {piece_label} {self.pos_to_label(src)} -> {self.pos_to_label(dst)}"
 
-        self.move_history.append(move_str)
-        self.history_listbox.insert(tk.END, move_str)
-        self.history_listbox.yview(tk.END)
+        if not remote:
+            self.move_history.append(move_str)
+            self.history_listbox.insert(tk.END, move_str)
+            self.history_listbox.yview(tk.END)
+        else:
+            # remote move również dodajemy do historii
+            self.move_history.append(move_str)
+            self.history_listbox.insert(tk.END, move_str)
+            self.history_listbox.yview(tk.END)
+
 
 
     def pos_to_label(self, pos):
@@ -210,18 +218,24 @@ class BaseXiangqiGUI:
         return f"{col_label}{row_label}"
 
     def on_click(self, event):
-        col,row = self.pixel_to_board(event.x,event.y)
+        col, row = self.pixel_to_board(event.x, event.y)
         if not (0<=col<COLS and 0<=row<ROWS):
             return
+
+        # --- nowa kontrola: ruch tylko swoim kolorem ---
+        if hasattr(self, "my_turn") and not self.my_turn:
+            return
+
         if self.selected is None:
-            if (col,row) in self.pieces and self.pieces[(col,row)][0]==self.current_player:
+            if (col,row) in self.pieces and self.pieces[(col,row)][0]==self.player_color:
                 self.selected = (col,row)
                 self.highlighted_moves = get_legal_moves(self.pieces, self.selected)
         else:
             src,dst = self.selected,(col,row)
             if dst in self.highlighted_moves:
                 self._execute_move(src,dst)
-                self.current_player = 'b' if self.current_player=='r' else 'r'
+                if hasattr(self, "my_turn"):
+                    self.my_turn = False  # po ruchu kończy się tura lokalnego gracza
             self.selected = None
             self.highlighted_moves = []
         self.draw_highlights()
